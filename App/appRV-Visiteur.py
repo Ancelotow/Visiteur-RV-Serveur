@@ -3,6 +3,7 @@
 
 from flask import *
 import json
+import hashlib
 
 from modeles import modeleGSBRV
 
@@ -22,6 +23,18 @@ def seConnecter( matricule , mdp ) :
 		reponse.mimetype = 'application/json'
 		reponse.status_code = 404
 	return reponse
+	
+@app.route('/modifier/visiteur/<matricule>/<mdp>', methods = [ 'GET' ] )
+def modifierVisiteur( matricule, mdp ) :
+    password = hashlib.sha256(mdp.encode('utf-8')).hexdigest()
+    reponse = make_response( '' )
+    visiteur = modeleGSBRV.updateVisiteur( matricule, password )
+    
+    if visiteur == True :
+        reponse.status_code = 200
+    else :
+        reponse.status_code = 404
+
 		
 	
 @app.route( '/rapports/<matricule>/<mois>/<annee>' , methods = [ 'GET' ] )
@@ -42,7 +55,7 @@ def getRapportsVisite( matricule , mois , annee ) :
 @app.route( '/rapports/echantillons/<matricule>/<numRapport>' , methods = [ 'GET' ] )
 def getEchantillonsOfferts( matricule , numRapport ) :
 	offres = modeleGSBRV.getEchantillonsOfferts( matricule , numRapport )
-	print offres
+	print(offres)
 	
 	if offres != None :
 		reponse = make_response( json.dumps( offres ) )
@@ -89,8 +102,7 @@ def addRapportVisite() :
 	numRapport = modeleGSBRV.enregistrerRapportVisite( 	unRapport[ 'matricule' ] , 
 																unRapport[ 'praticien' ] ,
 																unRapport[ 'visite' ] ,
-																unRapport[ 'bilan' ] )
-	
+																unRapport[ 'bilan' ])
 	reponse = make_response( '' )												
 	if numRapport != None :
 		reponse.headers[ 'Location' ] = '/rapports/%s/%d' % ( unRapport[ 'matricule' ] , numRapport )
@@ -106,7 +118,7 @@ def addEchantillonsOfferts( matricule , numRapport ) :
 	print(echantillons)
 	nbEchantillons = modeleGSBRV.enregistrerEchantillonsOfferts( matricule , numRapport , echantillons )
 	
-	
+
 	reponse = make_response( '' )												
 	if numRapport != None :
 		reponse.headers[ 'Location' ] = '/rapports/echantillons/%s/%s' % ( matricule, numRapport )
@@ -116,11 +128,26 @@ def addEchantillonsOfferts( matricule , numRapport ) :
 	return reponse
 
 
+@app.route('/motifs', methods=['GET'])
+def getMotifs():
+	motifs = modeleGSBRV.getMotifs()
+
+	if motifs != None:
+		reponse = make_response(json.dumps(motifs))
+		reponse.mimetype = 'application/json'
+		reponse.status_code = 200
+	else:
+		reponse = make_response('')
+		reponse.mimetype = 'application/json'
+		reponse.status_code = 404
+	return reponse
+
+
 
 
 
 
 if __name__ == '__main__' :
-	app.run( debug = True , host = 'localhost' , port = 5000 )
+	app.run( debug = True , host = '0.0.0.0' , port = 5000 )
 
 

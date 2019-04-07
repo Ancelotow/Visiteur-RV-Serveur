@@ -14,8 +14,8 @@ def getConnexionBD() :
 			connexionBD = mysql.connector.connect(
 					host = 'localhost' ,
 					user = 'root' ,
-					password = 'azerty' ,
-					database = 'gsbrv'
+					password = '' ,
+					database = 'gsbrv2'
 				)
 		return connexionBD
 	except :
@@ -37,9 +37,9 @@ def seConnecter( matricule , mdp ) :
 					) 
 					and t1.tra_role <> 'Responsable'
 					and Visiteur.vis_matricule = %s
+					and Visiteur.vis_mdp = %s
 				'''
-
-		curseur.execute( requete , ( matricule , ) )
+		curseur.execute( requete , ( matricule , str(mdp) ) )
 		
 		enregistrement = curseur.fetchone()
 		
@@ -55,6 +55,22 @@ def seConnecter( matricule , mdp ) :
 	except :
 		return None
 		
+def updateVisiteur( matricule, mdp ):
+    try :
+        curseur = getConnexionBD().cursor()
+        requete = '''
+                    update visiteur
+                    set vis_mdp = %s
+                    where vis_matricule = %s 
+                '''
+        curseur.execute( requete , ( str(mdp) , matricule, ) )
+        connexionBD.commit()
+        curseur.close()
+        return True
+        
+    except : 
+        return None
+		
 def getRapportsVisite( matricule , mois , annee ) :
 	try :
 		curseur = getConnexionBD().cursor()
@@ -63,17 +79,23 @@ def getRapportsVisite( matricule , mois , annee ) :
 						rv.rap_num ,
 						rv.rap_date_visite ,
 						rv.rap_bilan ,
+						rv.rap_lu,
+						rv.rap_date_redaction,
+						m.mo_libelle,
 						p.pra_nom ,
 						p.pra_prenom ,
 						p.pra_cp ,
-						p.pra_ville
+						p.pra_ville,
+						rv.mo_code
 					from RapportVisite as rv
 					inner join Praticien as p
 					on p.pra_num = rv.pra_num
+					inner join Motif as m
+					on m.mo_code = rv.mo_code
 					where rv.vis_matricule = %s
 					and MONTH(rv.rap_date_visite) = %s
 					and YEAR(rv.rap_date_visite) = %s
-					order by rv.rap_date_visite
+					order by rv.rap_date_visite DESC
 				'''
 
 		curseur.execute( requete , ( matricule , mois , annee ) )
@@ -86,10 +108,17 @@ def getRapportsVisite( matricule , mois , annee ) :
 			unRapport[ 'rap_num' ] = unEnregistrement[ 0 ]
 			unRapport[ 'rap_date_visite' ] = '%04d-%02d-%02d' % ( unEnregistrement[ 1 ].year , unEnregistrement[ 1 ].month , unEnregistrement[ 1 ].day )
 			unRapport[ 'rap_bilan' ] = unEnregistrement[ 2 ]
-			unRapport[ 'pra_nom' ] = unEnregistrement[ 3 ]
-			unRapport[ 'pra_prenom' ] = unEnregistrement[ 4 ]
-			unRapport[ 'pra_cp' ] = unEnregistrement[ 5 ]
-			unRapport[ 'pra_ville' ] = unEnregistrement[ 5 ]
+			if unEnregistrement[ 3 ] == 1 :
+				unRapport[ 'rap_lu' ] = True
+			else :
+				unRapport[ 'rap_lu' ] = False
+			unRapport[ 'rap_date_redaction' ] = '%04d-%02d-%02d' % ( unEnregistrement[ 4 ].year , unEnregistrement[ 4 ].month , unEnregistrement[ 4 ].day )
+			unRapport[ 'mo_libelle' ] = unEnregistrement[ 5 ]
+			unRapport[ 'pra_nom' ] = unEnregistrement[ 6 ]
+			unRapport[ 'pra_prenom' ] = unEnregistrement[ 7 ]
+			unRapport[ 'pra_cp' ] = unEnregistrement[ 8 ]
+			unRapport[ 'pra_ville' ] = unEnregistrement[ 9 ]
+			unRapport[ 'mo_code' ] = unEnregistrement[ 10 ]
 			rapports.append( unRapport )
 			
 		curseur.close()
@@ -223,8 +252,8 @@ def enregistrerRapportVisite( matricule , numPraticien , dateVisite , bilan ) :
 			curseur = getConnexionBD().cursor()
 
 			requete = '''
-				insert into RapportVisite( vis_matricule , rap_num , rap_date_visite , rap_bilan , pra_num )
-				values( %s , %s , %s , %s , %s )
+				insert into RapportVisite( vis_matricule , rap_num , rap_date_visite , rap_bilan , pra_num, mo_code, rap_confiance  )
+				values( %s , %s , %s , %s , %s , 1 , "confiance" )
 				'''
 
 			curseur.execute( requete, ( matricule , numRapportVisite , dateVisite , bilan , numPraticien ) )
@@ -252,6 +281,7 @@ def enregistrerEchantillonsOfferts( matricule , numRapport , echantillons ) :
 			
 		nbOffresInserees = 0
 		for offre in echantillons.items() :
+
 			curseur.execute( requete, ( matricule , numRapport , offre[ 0 ] , offre[ 1 ]) )
 			nbOffresInserees += curseur.rowcount
 			
@@ -262,32 +292,36 @@ def enregistrerEchantillonsOfferts( matricule , numRapport , echantillons ) :
 		return nbOffresInserees
 
 	except :
+		for offre in echantillons.items() :
+
+			print(offre[ 0 ])
+
 		return None
 
-		
+
 if __name__ == '__main__' :
-		print 'Authentification du visiteur a131 :'
-		print seConnecter( 'a131' , '' )
-		print
+		print( 'Authentification du visiteur a131 :')
+		print(seConnecter( 'a131' , '' ))
+		print()
 		
-		print 'Liste des rapports de visite du visiteur a131 :'
+		print( 'Liste des rapports de visite du visiteur a131 :')
 		for unRapport in getRapportsVisite( 'a131' , 4 , 2018 ) :
-			print unRapport
-		print
+			print(unRapport)
+		print()
 		
-		print 'Liste des praticiens :'
+		print('Liste des praticiens :')
 		for unPraticien in getPraticiens() :
-			print unPraticien
+			print(unPraticien)
 		print
 		
-		print 'Liste des medicaments :'
+		print('Liste des medicaments :')
 		for unMedicament in getMedicaments() :
-			print unMedicament
+			print(unMedicament)
 		print
 		
-		print 'Générer numero rapport pour le visiteur a131 :'
-		print genererNumeroRapportVisite( 'a131' )
-		print
+		print('Générer numero rapport pour le visiteur a131 :')
+		print(genererNumeroRapportVisite( 'a131' ))
+		print()
 		'''
 		print 'Générer numero rapport pour le visiteur t60 :'
 		print genererNumeroRapportVisite( 't60' )
@@ -307,9 +341,35 @@ if __name__ == '__main__' :
 		print
 		'''
 		
-		print 'Liste des medicaments offerts par le visiteur a131 lors de sa 1ère visite :'
+		print('Liste des medicaments offerts par le visiteur a131 lors de sa 1ère visite :')
 		for uneOffre in getEchantillonsOfferts( 'a131' , 1 ) :
-			print uneOffre
+			print(uneOffre)
 		print
-		
+
+
+def getMotifs():
+	try:
+		curseur = getConnexionBD().cursor()
+		requete = '''
+					select mo_code , mo_libelle
+					from Motif
+				'''
+
+		curseur.execute(requete, ())
+
+		enregistrements = curseur.fetchall()
+
+		motifs = []
+		for unEnregistrement in enregistrements:
+			unMotif = {}
+			unMotif['mo_code'] = unEnregistrement[0]
+			unMotif['mo_libelle'] = unEnregistrement[1]
+			motifs.append(unMotif)
+
+		curseur.close()
+		return motifs
+
+	except:
+		return None
+
 		
