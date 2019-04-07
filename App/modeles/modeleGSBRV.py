@@ -14,8 +14,8 @@ def getConnexionBD() :
 			connexionBD = mysql.connector.connect(
 					host = 'localhost' ,
 					user = 'root' ,
-					password = '' ,
-					database = 'gsbrv2'
+					password = 'azerty' ,
+					database = 'gsbrv'
 				)
 		return connexionBD
 	except :
