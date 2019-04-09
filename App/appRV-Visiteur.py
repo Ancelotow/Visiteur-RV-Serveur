@@ -102,12 +102,18 @@ def addRapportVisite() :
 	numRapport = modeleGSBRV.enregistrerRapportVisite( 	unRapport[ 'matricule' ] , 
 																unRapport[ 'praticien' ] ,
 																unRapport[ 'visite' ] ,
-																unRapport[ 'bilan' ])
+																unRapport[ 'bilan' ],
+																unRapport['motif'],
+																unRapport['confiance'])
 	reponse = make_response( '' )												
 	if numRapport != None :
 		reponse.headers[ 'Location' ] = '/rapports/%s/%d' % ( unRapport[ 'matricule' ] , numRapport )
+		reponse = make_response(json.dumps(unRapport))
+		reponse.mimetype = 'application/json'
 		reponse.status_code = 201
 	else :
+		reponse = make_response(json.dumps(''))
+		reponse.mimetype = 'application/json'
 		reponse.status_code = 409
 	return reponse
 	
@@ -120,11 +126,10 @@ def addEchantillonsOfferts( matricule , numRapport ) :
 	
 
 	reponse = make_response( '' )												
-	if numRapport != None :
-		reponse.headers[ 'Location' ] = '/rapports/echantillons/%s/%s' % ( matricule, numRapport )
-		reponse.status_code = 201
-	else :
-		reponse.status_code = 409
+
+	reponse.headers[ 'Location' ] = '/rapports/echantillons/%s/%s' % ( matricule, numRapport )
+	reponse.status_code = 201
+
 	return reponse
 
 

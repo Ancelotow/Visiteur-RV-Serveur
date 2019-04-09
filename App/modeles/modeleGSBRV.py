@@ -3,6 +3,7 @@
 
 
 import mysql.connector
+from datetime import *
 
 
 connexionBD = None
@@ -14,8 +15,8 @@ def getConnexionBD() :
 			connexionBD = mysql.connector.connect(
 					host = 'localhost' ,
 					user = 'root' ,
-					password = '' ,
-					database = 'gsbrv2'
+					password = 'azerty' ,
+					database = 'gsbrv'
 				)
 		return connexionBD
 	except :
@@ -242,24 +243,23 @@ def genererNumeroRapportVisite( matricule ) :
 		return None
 
 
-def enregistrerRapportVisite( matricule , numPraticien , dateVisite , bilan ) :
+def enregistrerRapportVisite( matricule , numPraticien , dateVisite , bilan, motif, confiance) :
 	
 	numRapportVisite = genererNumeroRapportVisite( matricule )
-	
+	print(numRapportVisite)
 	if numRapportVisite != None :
-	
+
 		try:
 			curseur = getConnexionBD().cursor()
 
 			requete = '''
-				insert into RapportVisite( vis_matricule , rap_num , rap_date_visite , rap_bilan , pra_num, mo_code, rap_confiance  )
-				values( %s , %s , %s , %s , %s , 1 , "confiance" )
+				insert into RapportVisite( vis_matricule , rap_num , rap_date_visite , rap_bilan , pra_num, mo_code, rap_confiance, rap_date_redaction  )
+				values( %s , %s , %s , %s , %s , %s , %s, %s )
 				'''
-
-			curseur.execute( requete, ( matricule , numRapportVisite , dateVisite , bilan , numPraticien ) )
+			visite = datetime.strptime(dateVisite, '%d-%m-%Y')
+			curseur.execute( requete, ( matricule , numRapportVisite , visite , bilan , numPraticien, motif, confiance, date.today(), ) )
 			connexionBD.commit()
 			curseur.close()
-
 			return numRapportVisite
 
 		except:
